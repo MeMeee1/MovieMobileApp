@@ -1,39 +1,60 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
-import 'react-native-reanimated';
-
-import { useColorScheme } from '@/hooks/useColorScheme';
-
-// Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
+import { StatusBar } from 'react-native';
+import { ThemeProvider, useTheme, DefaultTheme, DarkTheme } from '@react-navigation/native';
+import { createContext, useContext, useState } from 'react';
+import { useFonts } from '@/constant/Fonts';
+// Create a theme context
+const ThemeContext = createContext({
+  isDark: false,
+  toggleTheme: () => {}
+});
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
+  const [isDark, setIsDark] = useState(false);
+  const fontsLoaded = useFonts(); // Call the hook to get the boolean
 
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
-
-  if (!loaded) {
-    return null;
+  // Wait for fonts to load before rendering the app
+  if (!fontsLoaded) {
+    return null; // Or you can return a loading screen here
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <ThemeContext.Provider
+      value={{
+        isDark,
+        toggleTheme: () => setIsDark(!isDark),
+      }}
+    >
+      <ThemeProvider value={isDark ? DarkTheme : DefaultTheme}>
+        <Layout />
+      </ThemeProvider>
+    </ThemeContext.Provider>
   );
+}
+
+function Layout() {
+  const { dark } = useTheme();
+
+  return (
+    <>
+      <StatusBar
+        translucent
+        backgroundColor="transparent"
+        barStyle={dark ? 'light-content' : 'dark-content'}
+      />
+      <Stack>
+        <Stack.Screen 
+          name="(tabs)" 
+          options={{ 
+            headerShown: false 
+          }} 
+        />
+      </Stack>
+    </>
+  );
+}
+
+// Export the theme hook for use in components
+export function useAppTheme() {
+  return useContext(ThemeContext);
 }
